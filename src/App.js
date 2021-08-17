@@ -15,8 +15,9 @@ import { CopyToClipboard } from "react-copy-to-clipboard";
 import Peer from "simple-peer";
 import io from "socket.io-client";
 import "./App.css";
-//"https://videocall-be.herokuapp.com/"
-const socket = io.connect("http://localhost:5000/");
+const live = "https://videocall-be.herokuapp.com/";
+const local = "http://localhost:5000/";
+const socket = io.connect(live);
 
 function App() {
   const [myName, setmyName] = useState("");
