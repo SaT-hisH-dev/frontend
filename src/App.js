@@ -17,22 +17,38 @@ import PhoneIcon from "@material-ui/icons/Phone";
 import React, { useEffect, useRef, useState } from "react";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import Peer from "simple-peer";
+import { useSnackbar } from "notistack";
+
 import io from "socket.io-client";
 import "./App.css";
+import { NavLink, Prompt } from "react-router-dom";
 const live = "https://videocall-be.herokuapp.com/";
 const local = "http://localhost:5000/";
-const socket = io.connect(live);
+const socket = io.connect(local);
 const TYPING_TIMER_LENGTH = 400; // ms
 function App() {
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
+  const messagesEndRef = useRef(null);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+      inline: "nearest",
+    });
+  };
+
   let typing = false;
   let lastTypingTime;
   const [messageFlag, setmessageFlag] = useState(true);
   const [receiveMessage, setreceiveMessage] = useState([]);
   useEffect(() => {
-    socket.on("user joined", (username, number) => {
-      console.log(username, number, "check");
+    socket.on("user joined", ({ username, number }) => {
+      enqueueSnackbar(`${username} Joined the chat`, {
+        variant: "success",
+        autoHideDuration: 5000,
+      });
     });
 
     // socket.on("typing", (data) => {
@@ -68,7 +84,6 @@ function App() {
       socket.emit("typing");
     }
     lastTypingTime = new Date().getTime();
-
     setTimeout(() => {
       const typingTimer = new Date().getTime();
       const timeDiff = typingTimer - lastTypingTime;
@@ -78,10 +93,27 @@ function App() {
       }
     }, TYPING_TIMER_LENGTH);
   };
-
-  console.log(receiveMessage, "receiveMessage");
+  const handleKeypress = (e) => {
+    if (e.key === "Enter" && message.length > 0) {
+      sendMessage();
+    }
+  };
+  useEffect(() => {
+    if (receiveMessage.length > 4) {
+      scrollToBottom();
+    }
+  }, [receiveMessage]);
+  useEffect(() => {
+    if (false) {
+      console.log("c");
+      window.onbeforeunload = () => true;
+    } else {
+      window.onbeforeunload = undefined;
+    }
+  }, []);
   return (
     <>
+      <Prompt when={true} message="Are you Sure ?" />
       {messageFlag ? (
         <>
           {" "}
@@ -95,26 +127,36 @@ function App() {
         </>
       ) : (
         <>
-          {receiveMessage.map((val) => {
-            console.log(val);
-            return (
-              <Card variant="outlined">
-                <CardContent>
-                  <Typography variant="h5" component="h2">
-                    {val.username}
-                  </Typography>
-                  <Typography color="textSecondary">{val.value}</Typography>
-                </CardContent>
-              </Card>
-            );
-          })}
-          <Input
-            type="text"
-            placeholder="Enter your message"
-            value={message}
-            onChange={messageHandle}
-          />
-          <Button onClick={sendMessage}>Send</Button>
+          <div ref={messagesEndRef}>
+            <NavLink to="/">Home</NavLink>
+
+            {receiveMessage.map((val) => {
+              console.log(val);
+              return (
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h5" component="h2">
+                      {val.username}
+                    </Typography>
+                    <Typography color="textSecondary">{val.value}</Typography>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+            <Input
+              type="text"
+              placeholder="Enter your message"
+              value={message}
+              onKeyPress={handleKeypress}
+              onChange={messageHandle}
+            />
+            {message.length > 0 && (
+              <Button type="submit" onClick={sendMessage}>
+                Send
+              </Button>
+            )}
+          </div>
         </>
       )}
     </>
