@@ -1,9 +1,13 @@
 import {
+  Card,
+  CardActions,
+  CardContent,
   Divider,
   Input,
   List,
   ListItem,
   ListItemText,
+  Typography,
 } from "@material-ui/core";
 import Button from "@material-ui/core/Button";
 import IconButton from "@material-ui/core/IconButton";
@@ -18,83 +22,101 @@ import "./App.css";
 const live = "https://videocall-be.herokuapp.com/";
 const local = "http://localhost:5000/";
 const socket = io.connect(live);
-
+const TYPING_TIMER_LENGTH = 400; // ms
 function App() {
-  const [myName, setmyName] = useState("");
-  const [message, setmessage] = useState("");
-  const [myId, setmyId] = useState("");
-  const [error, seterror] = useState("");
-  const [senderId, setsenderId] = useState("");
-  const [listmessage, setlistmessage] = useState([]);
+  const [name, setName] = useState("");
+  const [message, setMessage] = useState("");
+  let typing = false;
+  let lastTypingTime;
+  const [messageFlag, setmessageFlag] = useState(true);
+  const [receiveMessage, setreceiveMessage] = useState([]);
   useEffect(() => {
-    socket.on("self", (arg) => {
-      console.log(arg);
-      setmyId(arg);
+    socket.on("user joined", (username, number) => {
+      console.log(username, number, "check");
     });
 
-    socket.on("callUser", (arg) => {
-      setlistmessage((val) => [...val, arg]);
+    // socket.on("typing", (data) => {
+    //   setreceiveMessage((v) => [...v, data]);
+    // });
+
+    socket.on("new message", (data) => {
+      setreceiveMessage((v) => [...v, data]);
     });
   }, []);
 
-  const enterName = (e) => {
-    setmyName(e.target.value);
+  const nameHandle = (e) => {
+    setName(e.target.value);
+  };
+  const saveName = () => {
+    socket.emit("add user", name);
+    setmessageFlag(false);
+  };
+
+  const messageHandle = (e) => {
+    updateTyping();
+    setMessage(e.target.value);
   };
 
   const sendMessage = () => {
-    setlistmessage((val) => [...val, { name: "you", message: message }]);
+    socket.emit("new message", message);
+    setreceiveMessage((v) => [...v, { username: "You", value: message }]);
+    setMessage("");
+  };
+  const updateTyping = () => {
+    if (!typing) {
+      typing = true;
+      socket.emit("typing");
+    }
+    lastTypingTime = new Date().getTime();
 
-    socket.emit("callUser", { id: senderId, message: message, name: myName });
-    setmessage("");
+    setTimeout(() => {
+      const typingTimer = new Date().getTime();
+      const timeDiff = typingTimer - lastTypingTime;
+      if (timeDiff >= TYPING_TIMER_LENGTH && typing) {
+        socket.emit("stop typing");
+        typing = false;
+      }
+    }, TYPING_TIMER_LENGTH);
   };
 
-  const onchangemessage = (e) => {
-    setmessage(e.target.value);
-    seterror("");
-  };
-
-  const senderHandle = (e) => {
-    setsenderId(e.target.value);
-  };
-
+  console.log(receiveMessage, "receiveMessage");
   return (
     <>
-      <Input
-        placeholder="Enter your name"
-        name="myName"
-        value={myName}
-        type="text"
-        onChange={enterName}
-      />
-      <Input
-        placeholder="Enter sender id"
-        name="senderId"
-        value={senderId}
-        type="text"
-        onChange={senderHandle}
-      />
-      <Input
-        name="message"
-        value={message}
-        onChange={onchangemessage}
-        placeholder="Enter your message"
-        type="text"
-      />
-      {error}
-      <Button onClick={sendMessage}>Send</Button>
-      yourId:{myId}
-      {listmessage.map((mes) => {
-        return (
-          <>
-            <List component="nav" aria-label="mailbox folders">
-              <ListItem button>
-                <ListItemText primary={mes.name} secondary={mes.message} />
-              </ListItem>
-              <Divider light />
-            </List>
-          </>
-        );
-      })}
+      {messageFlag ? (
+        <>
+          {" "}
+          <Input
+            type="text"
+            value={name}
+            placeholder="Enter your name"
+            onChange={nameHandle}
+          />
+          <Button onClick={saveName}>Save</Button>
+        </>
+      ) : (
+        <>
+          {receiveMessage.map((val) => {
+            console.log(val);
+            return (
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography variant="h5" component="h2">
+                    {val.username}
+                  </Typography>
+                  <Typography color="textSecondary">{val.value}</Typography>
+                </CardContent>
+              </Card>
+            );
+          })}
+          <Input
+            type="text"
+            placeholder="Enter your message"
+            value={message}
+            onChange={messageHandle}
+          />
+          <Button onClick={sendMessage}>Send</Button>
+        </>
+      )}
     </>
   );
 }
