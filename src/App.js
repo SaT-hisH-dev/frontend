@@ -24,7 +24,7 @@ import "./App.css";
 import { NavLink, Prompt } from "react-router-dom";
 const live = "https://videocall-be.herokuapp.com/";
 const local = "http://localhost:5000/";
-const socket = io.connect(local);
+const socket = io.connect(live);
 const TYPING_TIMER_LENGTH = 400; // ms
 function App() {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
@@ -128,8 +128,6 @@ function App() {
       ) : (
         <>
           <div ref={messagesEndRef}>
-            <NavLink to="/">Home</NavLink>
-
             {receiveMessage.map((val) => {
               console.log(val);
               return (
