@@ -136,7 +136,7 @@ function App() {
             {receiveMessage.map((val) => {
               console.log(val);
               return (
-                <Card style={val.self && design} variant="outlined">
+                <Card style={val.self ? design : {}} variant="outlined">
                   <CardContent>
                     <Typography variant="h5" component="h2">
                       {val.username}
