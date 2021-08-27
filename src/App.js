@@ -51,9 +51,12 @@ function App() {
       });
     });
 
-    // socket.on("typing", (data) => {
-    //   setreceiveMessage((v) => [...v, data]);
-    // });
+    socket.on("user left", (data) => {
+      enqueueSnackbar(`${data.username} Left the chat`, {
+        variant: "error",
+        autoHideDuration: 5000,
+      });
+    });
 
     socket.on("new message", (data) => {
       setreceiveMessage((v) => [...v, data]);
@@ -75,7 +78,10 @@ function App() {
 
   const sendMessage = () => {
     socket.emit("new message", message);
-    setreceiveMessage((v) => [...v, { username: "You", value: message }]);
+    setreceiveMessage((v) => [
+      ...v,
+      { username: "You", value: message, self: true },
+    ]);
     setMessage("");
   };
   const updateTyping = () => {
@@ -103,17 +109,16 @@ function App() {
       scrollToBottom();
     }
   }, [receiveMessage]);
-  useEffect(() => {
-    if (false) {
-      console.log("c");
-      window.onbeforeunload = () => true;
-    } else {
-      window.onbeforeunload = undefined;
-    }
-  }, []);
+
+  const design = {
+    display: "flex",
+    flex: "1",
+    "flex-direction": "column",
+    "align-items": "flex-end",
+  };
+
   return (
     <>
-      <Prompt when={true} message="Are you Sure ?" />
       {messageFlag ? (
         <>
           {" "}
@@ -131,7 +136,7 @@ function App() {
             {receiveMessage.map((val) => {
               console.log(val);
               return (
-                <Card variant="outlined">
+                <Card style={val.self && design} variant="outlined">
                   <CardContent>
                     <Typography variant="h5" component="h2">
                       {val.username}
